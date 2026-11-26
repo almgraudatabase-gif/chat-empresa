@@ -26,6 +26,7 @@ import { Icon, type IconName } from '../components/Icon';
 import { Spinner } from '../components/Spinner';
 import { cx } from '../utils/format';
 
+
 function CircleButton({ icon, label, onClick, active = true, danger = false }: {
   icon: IconName; label: string; onClick: () => void; active?: boolean; danger?: boolean;
 }) {
@@ -44,6 +45,7 @@ function CircleButton({ icon, label, onClick, active = true, danger = false }: {
   );
 }
 
+
 function CallStage({ chatId, video, title }: { chatId: string; video: boolean; title: string }) {
   const room = useRoomContext();
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled } = useLocalParticipant();
@@ -51,32 +53,29 @@ function CallStage({ chatId, video, title }: { chatId: string; video: boolean; t
   const tracks = useTracks([{ source: Track.Source.Camera, withPlaceholder: true }], { onlySubscribed: false });
   const cams = useMediaDeviceSelect({ kind: 'videoinput' });
 
-  // Si todos los demás se fueron (colgaron o perdieron conexión), esta persona también sale
-  // y la llamada se marca como terminada. Solo aplica después de haber estado acompañado.
-  const hadOthers = useRef(false);
+
+  // Si alguien se va y esta persona se queda sola en la sala, la llamada termina.
+  // (Aplica igual a llamadas individuales y de grupo.)
   useEffect(() => {
-    const check = () => {
-      if (room.remoteParticipants.size > 0) {
-        hadOthers.current = true;
-      } else if (hadOthers.current) {
+    const onLeft = () => {
+      if (room.remoteParticipants.size === 0) {
         void endActiveCall(chatId);
         void room.disconnect();
       }
     };
-    check();
-    room.on(RoomEvent.ParticipantConnected, check);
-    room.on(RoomEvent.ParticipantDisconnected, check);
+    room.on(RoomEvent.ParticipantDisconnected, onLeft);
     return () => {
-      room.off(RoomEvent.ParticipantConnected, check);
-      room.off(RoomEvent.ParticipantDisconnected, check);
+      room.off(RoomEvent.ParticipantDisconnected, onLeft);
     };
   }, [room, chatId]);
+
 
   const hangUp = () => {
     // Si no queda nadie más, la llamada se marca como terminada para todos.
     if (room.remoteParticipants.size === 0) void endActiveCall(chatId);
     void room.disconnect();
   };
+
 
   const switchCamera = () => {
     const devices = cams.devices;
@@ -85,6 +84,7 @@ function CallStage({ chatId, video, title }: { chatId: string; video: boolean; t
     const next = devices[(idx + 1) % devices.length];
     void cams.setActiveMediaDevice(next.deviceId);
   };
+
 
   return (
     <div className="flex h-full flex-col">
@@ -124,6 +124,7 @@ function CallStage({ chatId, video, title }: { chatId: string; video: boolean; t
   );
 }
 
+
 export default function CallPage() {
   const { chatId = '' } = useParams();
   const [params] = useSearchParams();
@@ -138,7 +139,9 @@ export default function CallPage() {
   const [error, setError] = useState<string | null>(null);
   const started = useRef(false);
 
+
   const leave = () => navigate(chatId ? `/chat/${chatId}` : '/', { replace: true });
+
 
   useEffect(() => {
     if (!user || !chat || started.current) return;
@@ -157,6 +160,7 @@ export default function CallPage() {
     })();
   }, [user, chat, chatId, mode, callType]);
 
+
   if (!user) return null;
   if (!chat && !chatsLoading) {
     return (
@@ -166,6 +170,7 @@ export default function CallPage() {
       </div>
     );
   }
+
 
   return (
     <div data-lk-theme="default" className="fixed inset-0 z-[60] bg-gray-900">
