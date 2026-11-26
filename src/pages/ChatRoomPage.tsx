@@ -60,7 +60,7 @@ function ChatRoom({ chatId, me }: { chatId: string; me: string }) {
   if (!chat) return null;
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <ChatHeader chat={chat} me={me} typingUids={typingUids} onOpenInfo={() => setInfo(true)} />
       <MessageList
         chat={chat}

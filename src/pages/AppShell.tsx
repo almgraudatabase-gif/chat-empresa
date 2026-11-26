@@ -51,7 +51,7 @@ export default function AppShell() {
   };
 
   return (
-    <div className="flex h-dvh bg-white text-gray-900 dark:bg-panel-dark dark:text-gray-100">
+    <div className="flex h-dvh overflow-hidden bg-white text-gray-900 dark:bg-panel-dark dark:text-gray-100">
       <aside
         className={cx(
           'relative w-full flex-col border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-panel-dark md:flex md:w-[380px] md:max-w-[40%] md:shrink-0',
@@ -98,7 +98,7 @@ export default function AppShell() {
         </Link>
       </aside>
 
-      <main className={cx('min-w-0 flex-1 flex-col md:flex', atRoot ? 'hidden' : 'flex')}>
+      <main className={cx('min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:flex', atRoot ? 'hidden' : 'flex')}>
         <Outlet />
       </main>
 
