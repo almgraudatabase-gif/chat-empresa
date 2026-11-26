@@ -4,12 +4,21 @@ import {
   MAX_FILE_BYTES,
   MAX_FILE_MB,
   MAX_IMAGE_INPUT_BYTES,
+  MAX_VIDEO_BYTES,
+  MAX_VIDEO_MB,
 } from './config';
 
 /** Devuelve un mensaje de error en español o null si el archivo es válido. */
 export function validateImage(file: File): string | null {
   if (!file.type.startsWith('image/')) return 'El archivo seleccionado no es una imagen.';
   if (file.size > MAX_IMAGE_INPUT_BYTES) return 'La foto es demasiado grande (máx. 25 MB).';
+  return null;
+}
+
+export function validateVideo(file: File): string | null {
+  if (!file.type.startsWith('video/')) return 'El archivo seleccionado no es un video.';
+  if (file.size === 0) return 'El video está vacío.';
+  if (file.size > MAX_VIDEO_BYTES) return `El video es demasiado grande (máx. ${MAX_VIDEO_MB} MB).`;
   return null;
 }
 

@@ -117,6 +117,11 @@ function MessageBubbleBase({ message: m, chat, mine, senderName, replyAuthor, sh
               <p className="text-xs text-gray-500">{formatBytes(m.fileSize)} · Toca para abrir</p>
             </div>
           </a>
+        ) : m.type === 'video' ? (
+          <div className="space-y-1">
+            <video src={m.mediaUrl} controls playsInline preload="metadata" className="max-h-80 w-full min-w-[200px] rounded-md bg-black" />
+            {m.text && <p className="whitespace-pre-wrap break-words px-1 text-sm">{m.text}</p>}
+          </div>
         ) : m.type === 'audio' ? (
           <AudioPlayer url={m.mediaUrl} duration={m.duration} />
         ) : m.type === 'sticker' ? (
@@ -134,7 +139,7 @@ function MessageBubbleBase({ message: m, chat, mine, senderName, replyAuthor, sh
           className={cx(
             'flex items-center justify-end gap-1 px-1 text-[11px] text-gray-500',
             isSticker && 'rounded-full bg-black/30 px-2 text-white',
-            (m.type === 'image' || m.type === 'file' || m.type === 'call' || m.type === 'audio') && 'mt-0.5',
+            (m.type === 'image' || m.type === 'file' || m.type === 'call' || m.type === 'audio' || m.type === 'video') && 'mt-0.5',
           )}
         >
           <span>{formatTime(m.createdAt)}</span>

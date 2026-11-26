@@ -3,7 +3,7 @@ import type { Chat, Message } from '../types';
 import { buildReplyRef, sendMessage } from '../services/messages';
 import { useUiStore } from '../context/uiStore';
 import { ALLOWED_FILE_EXTENSIONS } from '../utils/config';
-import { validateDocument, validateImage } from '../utils/files';
+import { validateDocument, validateImage, validateVideo } from '../utils/files';
 import { useUsersStore } from '../context/usersStore';
 import { AttachmentPreview, type UploadedAttachment } from './AttachmentPreview';
 import { EmojiStickerPicker } from './EmojiStickerPicker';
@@ -22,7 +22,7 @@ interface Props {
 
 interface Pending {
   file: File;
-  kind: 'image' | 'file';
+  kind: 'image' | 'file' | 'video';
 }
 
 export function MessageInput({ chat, me, replyTo, onCancelReply, onTyping, onStopTyping }: Props) {
@@ -37,6 +37,7 @@ export function MessageInput({ chat, me, replyTo, onCancelReply, onTyping, onSto
   const taRef = useRef<HTMLTextAreaElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLInputElement>(null);
   const docRef = useRef<HTMLInputElement>(null);
 
   const fail = (e: unknown) => toast((e as Error).message || 'No se pudo enviar el mensaje.');
@@ -81,11 +82,13 @@ export function MessageInput({ chat, me, replyTo, onCancelReply, onTyping, onSto
     }
   };
 
-  const onPick = (kind: 'image' | 'file') => (e: ChangeEvent<HTMLInputElement>) => {
+  const onPick = (wanted: 'image' | 'file' | 'video') => (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    const err = kind === 'image' ? validateImage(file) : validateDocument(file);
+    // La galería acepta fotos y videos: se decide por el tipo del archivo
+    const kind = wanted === 'image' && file.type.startsWith('video/') ? 'video' : wanted;
+    const err = kind === 'image' ? validateImage(file) : kind === 'video' ? validateVideo(file) : validateDocument(file);
     if (err) return toast(err);
     setAttachMenu(false);
     setPending({ file, kind });
@@ -96,7 +99,7 @@ export function MessageInput({ chat, me, replyTo, onCancelReply, onTyping, onSto
     try {
       await sendMessage(chat, me, {
         type: a.kind,
-        text: a.kind === 'image' ? a.caption : '',
+        text: a.kind === 'file' ? '' : a.caption,
         mediaUrl: a.url,
         fileName: a.fileName,
         fileSize: a.fileSize,
@@ -183,6 +186,9 @@ export function MessageInput({ chat, me, replyTo, onCancelReply, onTyping, onSto
                 <button className="flex w-full items-center gap-3 px-4 py-3 text-sm hover:bg-black/5 dark:hover:bg-white/10" onClick={() => cameraRef.current?.click()}>
                   <Icon name="camera" className="h-5 w-5 text-pink-500" /> Cámara
                 </button>
+                <button className="flex w-full items-center gap-3 px-4 py-3 text-sm hover:bg-black/5 dark:hover:bg-white/10" onClick={() => videoRef.current?.click()}>
+                  <Icon name="video" className="h-5 w-5 text-red-500" /> Grabar video
+                </button>
                 <button className="flex w-full items-center gap-3 px-4 py-3 text-sm hover:bg-black/5 dark:hover:bg-white/10" onClick={() => galleryRef.current?.click()}>
                   <Icon name="image" className="h-5 w-5 text-purple-500" /> Galería
                 </button>
@@ -195,7 +201,8 @@ export function MessageInput({ chat, me, replyTo, onCancelReply, onTyping, onSto
         </div>
 
         <input ref={cameraRef} type="file" accept="image/*" capture="environment" hidden onChange={onPick('image')} />
-        <input ref={galleryRef} type="file" accept="image/*" hidden onChange={onPick('image')} />
+        <input ref={galleryRef} type="file" accept="image/*,video/*" hidden onChange={onPick('image')} />
+        <input ref={videoRef} type="file" accept="video/*" capture="environment" hidden onChange={onPick('video')} />
         <input
           ref={docRef}
           type="file"

@@ -6,7 +6,7 @@ import { Icon } from './Icon';
 import { FileTypeIcon } from './FileTypeIcon';
 
 export interface UploadedAttachment {
-  kind: 'image' | 'file';
+  kind: 'image' | 'file' | 'video';
   url: string;
   fileName: string;
   fileSize: number;
@@ -15,20 +15,27 @@ export interface UploadedAttachment {
 
 interface Props {
   file: File;
-  kind: 'image' | 'file';
+  kind: 'image' | 'file' | 'video';
   onCancel: () => void;
   onSend: (a: UploadedAttachment) => Promise<void>;
 }
 
 /** Vista previa antes de enviar: comprime fotos, muestra barra de progreso y permite cancelar. */
 export function AttachmentPreview({ file, kind, onCancel, onSend }: Props) {
-  const [blob, setBlob] = useState<Blob | null>(kind === 'file' ? file : null);
+  const [blob, setBlob] = useState<Blob | null>(kind === 'image' ? null : file);
   const [previewUrl, setPreviewUrl] = useState('');
   const [caption, setCaption] = useState('');
   const [progress, setProgress] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (kind !== 'video') return;
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file, kind]);
 
   useEffect(() => {
     if (kind !== 'image') return;
@@ -55,8 +62,8 @@ export function AttachmentPreview({ file, kind, onCancel, onSend }: Props) {
     setProgress(0);
     abortRef.current = new AbortController();
     try {
-      const fileName = kind === 'image' ? `foto-${Date.now()}.jpg` : file.name;
-      const res = await uploadToCloudinary(blob, fileName, kind === 'image' ? 'image' : 'raw', setProgress, abortRef.current.signal);
+      const fileName = kind === 'image' ? `foto-${Date.now()}.jpg` : file.name || `video-${Date.now()}.mp4`;
+      const res = await uploadToCloudinary(blob, fileName, kind === 'image' ? 'image' : kind === 'video' ? 'video' : 'raw', setProgress, abortRef.current.signal);
       await onSend({ kind, url: res.url, fileName, fileSize: res.bytes || blob.size, caption: caption.trim() });
     } catch (e) {
       if ((e as DOMException).name !== 'AbortError') setError((e as Error).message);
@@ -75,11 +82,13 @@ export function AttachmentPreview({ file, kind, onCancel, onSend }: Props) {
         <button onClick={cancel} aria-label="Cancelar" className="rounded-full p-2 hover:bg-white/10">
           <Icon name="close" />
         </button>
-        <span className="font-medium">{kind === 'image' ? 'Vista previa de la foto' : 'Enviar archivo'}</span>
+        <span className="font-medium">{kind === 'image' ? 'Vista previa de la foto' : kind === 'video' ? 'Vista previa del video' : 'Enviar archivo'}</span>
       </div>
 
       <div className="flex min-h-0 flex-1 items-center justify-center p-4">
-        {kind === 'image' ? (
+        {kind === 'video' ? (
+          <video src={previewUrl} controls playsInline className="max-h-full max-w-full rounded-lg" />
+        ) : kind === 'image' ? (
           previewUrl ? (
             <img src={previewUrl} alt="Vista previa" className="max-h-full max-w-full rounded-lg object-contain" />
           ) : (
@@ -101,9 +110,9 @@ export function AttachmentPreview({ file, kind, onCancel, onSend }: Props) {
           </div>
         )}
         {error && previewUrl && <p className="text-sm text-red-300">{error}</p>}
-        {error && kind === 'file' && <p className="text-sm text-red-300">{error}</p>}
+        {error && kind !== 'image' && <p className="text-sm text-red-300">{error}</p>}
         <div className="flex items-center gap-2">
-          {kind === 'image' && (
+          {(kind === 'image' || kind === 'video') && (
             <input
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
@@ -113,8 +122,7 @@ export function AttachmentPreview({ file, kind, onCancel, onSend }: Props) {
               className="min-w-0 flex-1 rounded-full bg-gray-700 px-4 py-2 text-sm outline-none placeholder:text-gray-400"
             />
           )}
-          {kind === 'file' && <div className="flex-1" />}
-          <button
+                    <button
             onClick={() => void send()}
             disabled={busy || !blob}
             className="flex h-12 w-12 items-center justify-center rounded-full bg-brand text-white disabled:opacity-50"

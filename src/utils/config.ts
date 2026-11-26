@@ -20,6 +20,10 @@ export const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 /** Tamaño máximo de una foto original antes de comprimir. */
 export const MAX_IMAGE_INPUT_BYTES = 25 * 1024 * 1024;
 
+/** Tamaño máximo de un video. */
+export const MAX_VIDEO_MB = 50;
+export const MAX_VIDEO_BYTES = MAX_VIDEO_MB * 1024 * 1024;
+
 export const PAGE_SIZE = 30;
 
 export const ALLOWED_FILE_EXTENSIONS = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'ppt', 'pptx', 'txt', 'zip'];

@@ -9,7 +9,7 @@ export interface UserProfile {
   online: boolean;
 }
 
-export type MessageType = 'text' | 'image' | 'file' | 'sticker' | 'call' | 'audio';
+export type MessageType = 'text' | 'image' | 'file' | 'sticker' | 'call' | 'audio' | 'video';
 export type CallType = 'audio' | 'video';
 
 export interface LastMessage {

@@ -42,6 +42,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let preview = (last.text ?? '').slice(0, 140);
     if (last.type === 'image') preview = '📷 Foto';
     else if (last.type === 'file') preview = '📎 Archivo';
+    else if (last.type === 'video') preview = '🎥 Video';
     else if (last.type === 'audio') preview = '🎤 Mensaje de voz';
     else if (last.type === 'sticker') preview = 'Sticker';
     else if (isCall) preview = callType === 'video' ? '📹 Videollamada entrante' : '📞 Llamada entrante';
