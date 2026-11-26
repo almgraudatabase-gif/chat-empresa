@@ -1,0 +1,40 @@
+{
+  "name": "chat-empresa",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && tsc -p api/tsconfig.json && vite build",
+    "preview": "vite preview",
+    "assets": "node scripts/generate-assets.mjs"
+  },
+  "dependencies": {
+    "@livekit/components-react": "^2.9.26",
+    "@livekit/components-styles": "^1.2.0",
+    "emoji-picker-react": "^5.1.4",
+    "firebase": "^13.4.0",
+    "firebase-admin": "^14.5.1",
+    "livekit-client": "^2.25.0",
+    "livekit-server-sdk": "^2.20.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.7",
+    "zustand": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.11",
+    "@types/react": "^19.3.3",
+    "@types/react-dom": "^19.3.0",
+    "@vercel/node": "^33.0.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "autoprefixer": "^10.7.0",
+    "postcss": "^8.5.33",
+    "sharp": "^0.35.5",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^7.0.2",
+    "vite": "^8.4.0",
+    "vite-plugin-pwa": "^2.0.0",
+    "workbox-window": "^7.4.1"
+  }
+}

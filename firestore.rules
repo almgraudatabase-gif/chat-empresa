@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+
+    // Nota: get() en reglas cuenta como 1 lectura facturable por operación.
+    function isMember(chatId) {
+      return signedIn() && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.members;
+    }
+
+    // ---------- USUARIOS ----------
+    match /users/{uid} {
+      allow read: if signedIn();                                          // lista de usuarios de la empresa
+      allow create, update: if signedIn() && request.auth.uid == uid;     // solo su propio documento
+      allow delete: if false;
+
+      // Tokens FCM: privados (solo el dueño; el servidor usa firebase-admin)
+      match /private/{doc} {
+        allow read, write: if signedIn() && request.auth.uid == uid;
+      }
+    }
+
+    // ---------- CHATS ----------
+    match /chats/{chatId} {
+      allow read: if signedIn() && (resource == null || request.auth.uid in resource.data.members);
+
+      allow create: if signedIn()
+        && request.auth.uid in request.resource.data.members
+        && request.resource.data.createdBy == request.auth.uid
+        && (
+          // Directo: id determinístico a_b o b_a con exactamente 2 miembros
+          (request.resource.data.type == 'direct'
+            && request.resource.data.members.size() == 2
+            && (chatId == request.resource.data.members[0] + '_' + request.resource.data.members[1]
+                || chatId == request.resource.data.members[1] + '_' + request.resource.data.members[0]))
+          ||
+          // Grupo: el creador es administrador
+          (request.resource.data.type == 'group'
+            && request.auth.uid in request.resource.data.admins
+            && request.resource.data.members.size() >= 2)
+        );
+
+      allow update: if signedIn() && request.auth.uid in resource.data.members && (
+        // Cualquier miembro: último mensaje, no leídos y llamada activa
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessage', 'unreadCount', 'activeCall'])
+        ||
+        // Solo administradores de un grupo: miembros, admins, nombre y foto
+        (resource.data.type == 'group'
+          && request.auth.uid in resource.data.admins
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'admins', 'name', 'photoURL', 'unreadCount'])
+          && request.resource.data.admins.hasOnly(request.resource.data.members))
+        ||
+        // Cualquier miembro puede salirse del grupo (solo se quita a sí mismo)
+        (resource.data.type == 'group'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members', 'admins', 'unreadCount'])
+          && request.resource.data.members.toSet() == resource.data.members.toSet().difference([request.auth.uid].toSet()))
+      );
+      allow delete: if false;
+
+      // ---------- MENSAJES ----------
+      match /messages/{messageId} {
+        allow read: if isMember(chatId);
+        allow create: if isMember(chatId)
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.type in ['text', 'image', 'file', 'sticker', 'call'];
+        allow update: if isMember(chatId) && (
+          // Estados de entrega/lectura y "borrar para mí"
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deliveredTo', 'readBy', 'deletedFor'])
+          ||
+          // Solo el autor puede "borrar para todos"
+          (resource.data.senderId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deletedForAll', 'text', 'mediaUrl', 'fileName', 'fileSize']))
+        );
+        allow delete: if false;
+      }
+
+      // ---------- ESCRIBIENDO ----------
+      match /typing/{uid} {
+        allow read: if isMember(chatId);
+        allow write: if isMember(chatId) && request.auth.uid == uid;
+      }
+    }
+  }
+}
+
+/* ===== EJEMPLOS =====
+ PERMITIDO
+  - Ana (uid A) lee chats/A_B donde members=[A,B].
+  - Ana crea un mensaje en chats/A_B con senderId == A.
+  - Ana (admin del grupo G) agrega a Carlos a members de G.
+  - Ana edita users/A (su propio perfil) o users/A/private/push.
+  - Beto marca readBy en un mensaje de Ana (solo readBy/deliveredTo/deletedFor).
+  - Un miembro no admin se sale del grupo (quita solo su propio uid de members).
+ DENEGADO
+  - Carlos (no está en members) lee chats/A_B o sus mensajes.
+  - Beto crea un mensaje con senderId == A (suplantación).
+  - Beto (miembro no admin) cambia el nombre del grupo o agrega miembros.
+  - Beto "borra para todos" un mensaje de Ana.
+  - Ana edita users/B o lee users/B/private/push.
+  - Cualquier usuario sin sesión lee o escribe cualquier cosa.
+  - Crear un chat directo cuyo id no sea uidA_uidB.
+*/
