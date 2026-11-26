@@ -9,7 +9,7 @@ export interface UploadResult {
 export function uploadToCloudinary(
   file: Blob,
   fileName: string,
-  kind: 'image' | 'raw',
+  kind: 'image' | 'raw' | 'video', // el audio en Cloudinary se sube como 'video'
   onProgress: (percent: number) => void,
   signal?: AbortSignal,
 ): Promise<UploadResult> {

@@ -8,6 +8,8 @@ import { useUsersStore } from '../context/usersStore';
 import { AttachmentPreview, type UploadedAttachment } from './AttachmentPreview';
 import { EmojiStickerPicker } from './EmojiStickerPicker';
 import { Icon } from './Icon';
+import { VoiceRecorderBar, type RecordedVoice } from './VoiceRecorderBar';
+import { uploadToCloudinary } from '../services/cloudinary';
 
 interface Props {
   chat: Chat;
@@ -29,6 +31,7 @@ export function MessageInput({ chat, me, replyTo, onCancelReply, onTyping, onSto
   const [attachMenu, setAttachMenu] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
   const [sending, setSending] = useState(false);
+  const [recording, setRecording] = useState(false);
   const toast = useUiStore((s) => s.toast);
   const users = useUsersStore((s) => s.users);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -106,7 +109,27 @@ export function MessageInput({ chat, me, replyTo, onCancelReply, onTyping, onSto
     }
   };
 
-  const insertEmoji = (emoji: string) => {
+  const sendVoice = async (v: RecordedVoice) => {
+    setRecording(false);
+    setSending(true);
+    try {
+      const { url, bytes } = await uploadToCloudinary(v.blob, `audio-${Date.now()}.${v.ext}`, 'video', () => undefined);
+      await sendMessage(chat, me, {
+        type: 'audio',
+        mediaUrl: url,
+        fileSize: bytes,
+        duration: v.duration,
+        replyTo: replyTo ? buildReplyRef(replyTo) : null,
+      });
+      onCancelReply();
+    } catch (e) {
+      fail(e);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const insertEmoji =(emoji: string) => {
     setText((t) => t + emoji);
     onTyping();
     taRef.current?.focus();
@@ -128,7 +151,9 @@ export function MessageInput({ chat, me, replyTo, onCancelReply, onTyping, onSto
 
       {picker && <EmojiStickerPicker onEmoji={insertEmoji} onSticker={(u) => void sendSticker(u)} />}
 
-      <div className="relative flex items-end gap-1 bg-panel px-2 py-2 dark:bg-panel-dark">
+      {recording && <VoiceRecorderBar onCancel={() => setRecording(false)} onDone={(v) => void sendVoice(v)} onError={toast} />}
+
+      {!recording && (<div className="relative flex items-end gap-1 bg-panel px-2 py-2 dark:bg-panel-dark">
         <button
           onClick={() => {
             setPicker((v) => !v);
@@ -195,15 +220,29 @@ export function MessageInput({ chat, me, replyTo, onCancelReply, onTyping, onSto
           className="max-h-36 min-h-[40px] flex-1 resize-none rounded-2xl bg-white px-4 py-2 text-sm outline-none dark:bg-[#2a3942] dark:text-gray-100"
         />
 
-        <button
-          onClick={() => void sendText()}
-          disabled={!text.trim()}
-          aria-label="Enviar"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-white disabled:opacity-40"
-        >
-          <Icon name="send" className="h-5 w-5" />
-        </button>
-      </div>
+        {text.trim() ? (
+          <button
+            onClick={() => void sendText()}
+            aria-label="Enviar"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-white"
+          >
+            <Icon name="send" className="h-5 w-5" />
+          </button>
+        ) : (
+          <button
+            onClick={() => {
+              setPicker(false);
+              setAttachMenu(false);
+              setRecording(true);
+            }}
+            disabled={sending}
+            aria-label="Grabar mensaje de voz"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-white disabled:opacity-40"
+          >
+            <Icon name="mic" className="h-5 w-5" />
+          </button>
+        )}
+      </div>)}
 
       {pending && (
         <AttachmentPreview

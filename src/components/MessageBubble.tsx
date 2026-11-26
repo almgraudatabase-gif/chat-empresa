@@ -4,6 +4,7 @@ import { cx, formatBytes, formatTime } from '../utils/format';
 import { Icon } from './Icon';
 import { MessageStatus } from './MessageStatus';
 import { FileTypeIcon } from './FileTypeIcon';
+import { AudioPlayer } from './AudioPlayer';
 
 interface Props {
   message: Message;
@@ -116,6 +117,8 @@ function MessageBubbleBase({ message: m, chat, mine, senderName, replyAuthor, sh
               <p className="text-xs text-gray-500">{formatBytes(m.fileSize)} · Toca para abrir</p>
             </div>
           </a>
+        ) : m.type === 'audio' ? (
+          <AudioPlayer url={m.mediaUrl} duration={m.duration} />
         ) : m.type === 'sticker' ? (
           <img src={m.mediaUrl} alt="Sticker" className="h-32 w-32 object-contain" />
         ) : m.type === 'call' ? (
@@ -131,7 +134,7 @@ function MessageBubbleBase({ message: m, chat, mine, senderName, replyAuthor, sh
           className={cx(
             'flex items-center justify-end gap-1 px-1 text-[11px] text-gray-500',
             isSticker && 'rounded-full bg-black/30 px-2 text-white',
-            (m.type === 'image' || m.type === 'file' || m.type === 'call') && 'mt-0.5',
+            (m.type === 'image' || m.type === 'file' || m.type === 'call' || m.type === 'audio') && 'mt-0.5',
           )}
         >
           <span>{formatTime(m.createdAt)}</span>

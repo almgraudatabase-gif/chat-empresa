@@ -78,6 +78,8 @@ export function messagePreview(type: MessageType, text: string, callType?: strin
       return `📎 ${text || 'Archivo'}`;
     case 'sticker':
       return 'Sticker';
+    case 'audio':
+      return '🎤 Mensaje de voz';
     case 'call':
       return callType === 'video' ? '📹 Videollamada' : '📞 Llamada de voz';
     default:

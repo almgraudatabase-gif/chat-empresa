@@ -9,7 +9,7 @@ export interface UserProfile {
   online: boolean;
 }
 
-export type MessageType = 'text' | 'image' | 'file' | 'sticker' | 'call';
+export type MessageType = 'text' | 'image' | 'file' | 'sticker' | 'call' | 'audio';
 export type CallType = 'audio' | 'video';
 
 export interface LastMessage {
@@ -58,6 +58,7 @@ export interface Message {
   mediaUrl: string;
   fileName: string;
   fileSize: number;
+  duration: number;
   replyTo: ReplyRef | null;
   createdAt: Timestamp | null;
   deliveredTo: string[];
@@ -74,6 +75,7 @@ export interface OutgoingMessage {
   mediaUrl?: string;
   fileName?: string;
   fileSize?: number;
+  duration?: number;
   replyTo?: ReplyRef | null;
   callType?: CallType;
 }
