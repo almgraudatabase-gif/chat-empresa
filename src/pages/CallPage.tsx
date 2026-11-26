@@ -11,7 +11,7 @@ import {
   useRoomContext,
   useTracks,
 } from '@livekit/components-react';
-import { Track } from 'livekit-client';
+import { RoomEvent, Track } from 'livekit-client';
 import '@livekit/components-styles';
 import { useAuth } from '../context/AuthContext';
 import { useChatsStore } from '../context/chatsStore';
@@ -50,6 +50,27 @@ function CallStage({ chatId, video, title }: { chatId: string; video: boolean; t
   const participants = useParticipants();
   const tracks = useTracks([{ source: Track.Source.Camera, withPlaceholder: true }], { onlySubscribed: false });
   const cams = useMediaDeviceSelect({ kind: 'videoinput' });
+
+  // Si todos los demás se fueron (colgaron o perdieron conexión), esta persona también sale
+  // y la llamada se marca como terminada. Solo aplica después de haber estado acompañado.
+  const hadOthers = useRef(false);
+  useEffect(() => {
+    const check = () => {
+      if (room.remoteParticipants.size > 0) {
+        hadOthers.current = true;
+      } else if (hadOthers.current) {
+        void endActiveCall(chatId);
+        void room.disconnect();
+      }
+    };
+    check();
+    room.on(RoomEvent.ParticipantConnected, check);
+    room.on(RoomEvent.ParticipantDisconnected, check);
+    return () => {
+      room.off(RoomEvent.ParticipantConnected, check);
+      room.off(RoomEvent.ParticipantDisconnected, check);
+    };
+  }, [room, chatId]);
 
   const hangUp = () => {
     // Si no queda nadie más, la llamada se marca como terminada para todos.
